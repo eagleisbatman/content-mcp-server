@@ -21,8 +21,11 @@ CREATE INDEX IF NOT EXISTS idx_content_generation_jobs_job_type ON content_gener
 CREATE INDEX IF NOT EXISTS idx_content_generation_jobs_target_region ON content_generation_jobs(target_region);
 CREATE INDEX IF NOT EXISTS idx_content_generation_jobs_created_at ON content_generation_jobs(created_at);
 
--- Create content feed items table (if not exists from backend migration)
-CREATE TABLE IF NOT EXISTS content_feed_items (
+-- Drop and recreate content_feed_items table to ensure correct schema
+-- This is safe for new deployments; for production with data, use ALTER TABLE instead
+DROP TABLE IF EXISTS content_feed_items CASCADE;
+
+CREATE TABLE content_feed_items (
   id SERIAL PRIMARY KEY,
   content_type VARCHAR(20) NOT NULL CHECK (content_type IN ('podcast', 'image_article')),
   title TEXT NOT NULL,
@@ -51,15 +54,15 @@ CREATE TABLE IF NOT EXISTS content_feed_items (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_content_feed_items_content_type ON content_feed_items(content_type);
-CREATE INDEX IF NOT EXISTS idx_content_feed_items_language ON content_feed_items(language);
-CREATE INDEX IF NOT EXISTS idx_content_feed_items_valid_from ON content_feed_items(valid_from);
-CREATE INDEX IF NOT EXISTS idx_content_feed_items_valid_to ON content_feed_items(valid_to);
-CREATE INDEX IF NOT EXISTS idx_content_feed_items_is_published ON content_feed_items(is_published);
-CREATE INDEX IF NOT EXISTS idx_content_feed_items_tags ON content_feed_items USING GIN(tags);
-CREATE INDEX IF NOT EXISTS idx_content_feed_items_crop_tags ON content_feed_items USING GIN(crop_tags);
-CREATE INDEX IF NOT EXISTS idx_content_feed_items_region_tags ON content_feed_items USING GIN(region_tags);
-CREATE INDEX IF NOT EXISTS idx_content_feed_items_crop_stage ON content_feed_items(crop_stage);
-CREATE INDEX IF NOT EXISTS idx_content_feed_items_region_code ON content_feed_items(region_code);
-CREATE INDEX IF NOT EXISTS idx_content_feed_items_content_cohort ON content_feed_items(content_cohort);
+CREATE INDEX idx_content_feed_items_content_type ON content_feed_items(content_type);
+CREATE INDEX idx_content_feed_items_language ON content_feed_items(language);
+CREATE INDEX idx_content_feed_items_valid_from ON content_feed_items(valid_from);
+CREATE INDEX idx_content_feed_items_valid_to ON content_feed_items(valid_to);
+CREATE INDEX idx_content_feed_items_is_published ON content_feed_items(is_published);
+CREATE INDEX idx_content_feed_items_tags ON content_feed_items USING GIN(tags);
+CREATE INDEX idx_content_feed_items_crop_tags ON content_feed_items USING GIN(crop_tags);
+CREATE INDEX idx_content_feed_items_region_tags ON content_feed_items USING GIN(region_tags);
+CREATE INDEX idx_content_feed_items_crop_stage ON content_feed_items(crop_stage);
+CREATE INDEX idx_content_feed_items_region_code ON content_feed_items(region_code);
+CREATE INDEX idx_content_feed_items_content_cohort ON content_feed_items(content_cohort);
 
