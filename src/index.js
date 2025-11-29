@@ -216,6 +216,124 @@ app.get('/api/content/:id', async (req, res) => {
   }
 });
 
+/**
+ * POST /api/seed-test-content
+ * Seed test content for development/testing
+ */
+app.post('/api/seed-test-content', async (req, res) => {
+  try {
+    // Sample Vietnamese agricultural content
+    const testContent = [
+      {
+        content_type: 'podcast',
+        title: 'Cách phòng trừ sâu bệnh cho lúa mùa mưa',
+        summary: 'Hướng dẫn chi tiết cách nhận biết và xử lý các loại sâu bệnh phổ biến trên lúa trong mùa mưa.',
+        language: 'vi',
+        audio_url: 'https://example.com/audio/lua-sau-benh.mp3',
+        image_url: 'https://images.unsplash.com/photo-1536304993881-ff6e9eefa2a6?w=400',
+        tags: ['lúa', 'sâu bệnh', 'mùa mưa'],
+        crop_tags: ['rice'],
+        region_tags: ['mekong-delta'],
+        crop_stage: 'growing',
+        starter_questions: ['Làm sao nhận biết sâu đục thân?', 'Thuốc nào hiệu quả nhất?'],
+        valid_from: new Date().toISOString(),
+        is_published: true
+      },
+      {
+        content_type: 'podcast',
+        title: 'Kỹ thuật bón phân cho cà phê vào mùa khô',
+        summary: 'Chia sẻ kinh nghiệm bón phân đúng cách để cây cà phê phát triển tốt trong mùa khô.',
+        language: 'vi',
+        audio_url: 'https://example.com/audio/caphe-bon-phan.mp3',
+        image_url: 'https://images.unsplash.com/photo-1447933601403-0c6688de566e?w=400',
+        tags: ['cà phê', 'bón phân', 'mùa khô'],
+        crop_tags: ['coffee'],
+        region_tags: ['central-highlands'],
+        crop_stage: 'maintenance',
+        starter_questions: ['Bón phân lúc nào tốt nhất?', 'Lượng phân bao nhiêu?'],
+        valid_from: new Date().toISOString(),
+        is_published: true
+      },
+      {
+        content_type: 'image_article',
+        title: 'Nhận biết bệnh vàng lá trên cây ăn trái',
+        summary: 'Hình ảnh minh họa các dấu hiệu bệnh vàng lá và cách phòng trị hiệu quả.',
+        language: 'vi',
+        image_url: 'https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=400',
+        article_body: JSON.stringify({
+          sections: [
+            { heading: 'Triệu chứng', content: 'Lá chuyển vàng từ mép vào trong, cuống lá héo dần.', image_url: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=400' },
+            { heading: 'Nguyên nhân', content: 'Thiếu dinh dưỡng hoặc nấm bệnh tấn công rễ cây.' },
+            { heading: 'Cách xử lý', content: 'Bổ sung phân vi lượng, phun thuốc trừ nấm gốc đồng.' }
+          ]
+        }),
+        tags: ['bệnh cây', 'vàng lá', 'cây ăn trái'],
+        crop_tags: ['fruit-trees'],
+        region_tags: ['mekong-delta', 'southeast'],
+        starter_questions: ['Phân biệt vàng lá do thiếu chất và do bệnh?'],
+        valid_from: new Date().toISOString(),
+        is_published: true
+      },
+      {
+        content_type: 'podcast',
+        title: 'Mẹo chăm sóc gà trong mùa nóng',
+        summary: 'Các biện pháp giữ mát chuồng trại và bổ sung dinh dưỡng cho gà khi thời tiết nóng.',
+        language: 'vi',
+        audio_url: 'https://example.com/audio/ga-mua-nong.mp3',
+        image_url: 'https://images.unsplash.com/photo-1548550023-2bdb3c5beed7?w=400',
+        tags: ['chăn nuôi', 'gà', 'mùa nóng'],
+        crop_tags: [],
+        region_tags: ['all'],
+        starter_questions: ['Nhiệt độ lý tưởng cho gà?', 'Gà bị say nóng thì làm sao?'],
+        valid_from: new Date().toISOString(),
+        is_published: true
+      }
+    ];
+
+    // Insert test content
+    const insertedIds = [];
+    for (const item of testContent) {
+      const result = await query(
+        `INSERT INTO content_feed_items (
+          content_type, title, summary, language, audio_url, image_url,
+          article_body, tags, crop_tags, region_tags, crop_stage,
+          starter_questions, valid_from, is_published
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        RETURNING id`,
+        [
+          item.content_type,
+          item.title,
+          item.summary,
+          item.language,
+          item.audio_url || null,
+          item.image_url || null,
+          item.article_body || null,
+          item.tags,
+          item.crop_tags,
+          item.region_tags,
+          item.crop_stage || null,
+          JSON.stringify(item.starter_questions || []),
+          item.valid_from,
+          item.is_published
+        ]
+      );
+      insertedIds.push(result.rows[0].id);
+    }
+
+    res.json({
+      success: true,
+      message: `Inserted ${insertedIds.length} test content items`,
+      ids: insertedIds
+    });
+  } catch (error) {
+    console.error('[Seed Test Content] Error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // ============================================================================
 // SERVER STARTUP
 // ============================================================================
