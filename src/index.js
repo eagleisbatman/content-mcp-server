@@ -147,26 +147,31 @@ app.post('/mcp/generate_content', async (req, res) => {
 /**
  * GET /api/feed
  * Get personalized content feed for user
+ * Query params:
+ *   - language: 'en' or 'vi' (default: 'en')
+ *   - limit: number of items to return (default: 10)
+ *   - user_id: optional user ID for future personalization
  */
 app.get('/api/feed', async (req, res) => {
   try {
-    const { user_id, limit = 10 } = req.query;
+    const { user_id, limit = 10, language = 'en' } = req.query;
 
-    // TODO: Implement feed personalization
-    // 1. Get user profile (crops, region)
-    // 2. Filter content by user profile
-    // 3. Rank by relevance
-    // 4. Return top N items
+    // Map language codes to database format
+    const langCode = language === 'vi' ? 'vi' : 'en';
 
     const result = await query(
-      `SELECT * FROM content_feed_items
+      `SELECT id, content_type, title, summary, language,
+              audio_url, video_url, image_url, article_body,
+              tags, crop_tags, region_tags, crop_stage,
+              starter_questions, valid_from, valid_to
+       FROM content_feed_items
        WHERE is_published = true
-         AND language = 'vi'
+         AND language = $1
          AND valid_from <= NOW()
          AND (valid_to IS NULL OR valid_to >= NOW())
        ORDER BY created_at DESC
-       LIMIT $1`,
-      [parseInt(limit)]
+       LIMIT $2`,
+      [langCode, parseInt(limit)]
     );
 
     res.json({
@@ -327,6 +332,139 @@ app.post('/api/seed-test-content', async (req, res) => {
     });
   } catch (error) {
     console.error('[Seed Test Content] Error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * POST /api/seed-english-content
+ * Seed English test content for development/testing
+ */
+app.post('/api/seed-english-content', async (req, res) => {
+  try {
+    const englishContent = [
+      {
+        content_type: 'podcast',
+        title: 'Preventing Rice Pests During Rainy Season',
+        summary: 'A detailed guide on identifying and treating common rice pests during the rainy season.',
+        language: 'en',
+        audio_url: 'https://example.com/audio/rice-pests-en.mp3',
+        image_url: 'https://images.unsplash.com/photo-1536304993881-ff6e9eefa2a6?w=400',
+        tags: ['rice', 'pests', 'rainy season'],
+        crop_tags: ['rice'],
+        region_tags: ['mekong-delta'],
+        crop_stage: 'growing',
+        starter_questions: ['How to identify stem borers?', 'Which pesticide is most effective?', 'When is the best time to spray?'],
+        valid_from: new Date().toISOString(),
+        is_published: true
+      },
+      {
+        content_type: 'podcast',
+        title: 'Coffee Fertilization Tips for Dry Season',
+        summary: 'Expert advice on proper fertilization techniques to help coffee plants thrive during dry season.',
+        language: 'en',
+        audio_url: 'https://example.com/audio/coffee-fertilizer-en.mp3',
+        image_url: 'https://images.unsplash.com/photo-1447933601403-0c6688de566e?w=400',
+        tags: ['coffee', 'fertilization', 'dry season'],
+        crop_tags: ['coffee'],
+        region_tags: ['central-highlands'],
+        crop_stage: 'maintenance',
+        starter_questions: ['When is the best time to fertilize?', 'How much fertilizer per tree?', 'What nutrients does coffee need?'],
+        valid_from: new Date().toISOString(),
+        is_published: true
+      },
+      {
+        content_type: 'image_article',
+        title: 'Identifying Yellow Leaf Disease in Fruit Trees',
+        summary: 'Visual guide to recognizing yellow leaf disease symptoms and effective treatment methods.',
+        language: 'en',
+        image_url: 'https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=400',
+        article_body: JSON.stringify({
+          sections: [
+            { heading: 'Symptoms', content: 'Leaves turn yellow from edges inward, stems begin to wilt gradually.', image_url: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=400' },
+            { heading: 'Causes', content: 'Nutrient deficiency or fungal infection attacking tree roots.' },
+            { heading: 'Treatment', content: 'Add micronutrients, spray copper-based fungicide.' }
+          ]
+        }),
+        tags: ['disease', 'yellow leaf', 'fruit trees'],
+        crop_tags: ['fruit-trees'],
+        region_tags: ['mekong-delta', 'southeast'],
+        starter_questions: ['How to distinguish nutrient deficiency from disease?', 'What are the early warning signs?'],
+        valid_from: new Date().toISOString(),
+        is_published: true
+      },
+      {
+        content_type: 'podcast',
+        title: 'Keeping Chickens Healthy in Hot Weather',
+        summary: 'Essential tips for cooling poultry houses and providing proper nutrition during hot weather.',
+        language: 'en',
+        audio_url: 'https://example.com/audio/chickens-hot-weather-en.mp3',
+        image_url: 'https://images.unsplash.com/photo-1548550023-2bdb3c5beed7?w=400',
+        tags: ['poultry', 'chickens', 'hot weather'],
+        crop_tags: [],
+        region_tags: ['all'],
+        starter_questions: ['What is the ideal temperature for chickens?', 'How to treat heat stress in chickens?', 'Best cooling methods for poultry houses?'],
+        valid_from: new Date().toISOString(),
+        is_published: true
+      },
+      {
+        content_type: 'podcast',
+        title: 'Modern Irrigation Techniques for Small Farms',
+        summary: 'Learn about drip irrigation and efficient water management for better crop yields.',
+        language: 'en',
+        audio_url: 'https://example.com/audio/irrigation-en.mp3',
+        video_url: 'https://example.com/video/irrigation-demo.mp4',
+        image_url: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=400',
+        tags: ['irrigation', 'water management', 'farming tips'],
+        crop_tags: ['vegetables', 'rice'],
+        region_tags: ['all'],
+        crop_stage: 'planting',
+        starter_questions: ['How to set up drip irrigation?', 'How much water do crops need daily?', 'Is drip irrigation cost-effective?'],
+        valid_from: new Date().toISOString(),
+        is_published: true
+      }
+    ];
+
+    const insertedIds = [];
+    for (const item of englishContent) {
+      const result = await query(
+        `INSERT INTO content_feed_items (
+          content_type, title, summary, language, audio_url, video_url, image_url,
+          article_body, tags, crop_tags, region_tags, crop_stage,
+          starter_questions, valid_from, is_published
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+        RETURNING id`,
+        [
+          item.content_type,
+          item.title,
+          item.summary,
+          item.language,
+          item.audio_url || null,
+          item.video_url || null,
+          item.image_url || null,
+          item.article_body || null,
+          item.tags,
+          item.crop_tags,
+          item.region_tags,
+          item.crop_stage || null,
+          JSON.stringify(item.starter_questions || []),
+          item.valid_from,
+          item.is_published
+        ]
+      );
+      insertedIds.push(result.rows[0].id);
+    }
+
+    res.json({
+      success: true,
+      message: `Inserted ${insertedIds.length} English content items`,
+      ids: insertedIds
+    });
+  } catch (error) {
+    console.error('[Seed English Content] Error:', error);
     res.status(500).json({
       success: false,
       error: error.message

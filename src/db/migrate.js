@@ -39,6 +39,10 @@ async function runMigrations() {
       {
         name: '003_create_content_tables',
         sql: readFileSync(join(__dirname, 'migrations/003_create_content_tables.sql'), 'utf8')
+      },
+      {
+        name: '004_add_video_url',
+        sql: readFileSync(join(__dirname, 'migrations/004_add_video_url.sql'), 'utf8')
       }
     ];
 
